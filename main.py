@@ -114,6 +114,7 @@ class VocabularyCrimeScene:
         self.heading_font = font.Font(family="Arial", size=18, weight="bold")
         self.normal_font = font.Font(family="Arial", size=12)
         self.small_font = font.Font(family="Arial", size=10)
+        self.italic_font = font.Font(family="Arial", size=10, slant="italic")
         
         # Main container
         self.main_frame = tk.Frame(root, bg="#1a1a2e")
@@ -189,7 +190,7 @@ class VocabularyCrimeScene:
         # Info text
         info = tk.Label(
             self.main_frame,
-            text="Welcome, Detective!\n\nYour mission: Solve 8 vocabulary crimes by finding\nthe wrong word in each sentence and replacing it\nwith the correct one.\n\nCollect evidence. Earn detective points.\nLearn new vocabulary.",
+            text="Welcome, Detective!\n\nYour mission: Solve 8 vocabulary crimes by finding\nthe wrong word in each sentence and replacing it\nwith the correct one.\n\nCollect evidence. Earn detective points.\nExpand your vocabulary!",
             font=self.normal_font,
             fg="#ffffff",
             bg="#1a1a2e",
@@ -478,12 +479,11 @@ class VocabularyCrimeScene:
         example = tk.Label(
             word_panel,
             text=f'Example: "{case["example"]}"',
-            font=self.small_font,
+            font=self.italic_font,
             fg="#95e1d3",
             bg="#2d2d44",
             wraplength=600,
-            justify=tk.CENTER,
-            slant="italic"
+            justify=tk.CENTER
         )
         example.pack(pady=10)
         
@@ -640,7 +640,7 @@ Evidence Collected:
                 example_label = tk.Label(
                     word_card,
                     text=f'Example: "{data["example"]}"',
-                    font=self.small_font,
+                    font=self.italic_font,
                     fg="#95e1d3",
                     bg="#2d2d44",
                     wraplength=600,
