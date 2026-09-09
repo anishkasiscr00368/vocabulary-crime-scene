@@ -5,8 +5,8 @@ from enum import Enum
 class GameState(Enum):
     HOME = 1
     CASE_SELECTION = 2
-    CASE_ACTIVE = 3
-    WORD_VAULT = 4
+    INVESTIGATION = 3
+    WORD_REPLACEMENT = 4
     CASE_CLOSED = 5
 
 # Vocabulary Crime Cases Database
@@ -107,6 +107,7 @@ class VocabularyCrimeScene:
         self.evidence_collected = []
         self.words_learned = {}
         self.wrong_attempts = {}
+        self.identified_word = None  # Track if player has found the suspicious word
         
         # Create fonts
         self.title_font = font.Font(family="Arial", size=28, weight="bold")
@@ -115,6 +116,7 @@ class VocabularyCrimeScene:
         self.normal_font = font.Font(family="Arial", size=12)
         self.small_font = font.Font(family="Arial", size=10)
         self.italic_font = font.Font(family="Arial", size=10, slant="italic")
+        self.word_font = font.Font(family="Arial", size=14)
         
         # Main container
         self.main_frame = tk.Frame(root, bg="#1a1a2e")
@@ -212,12 +214,13 @@ class VocabularyCrimeScene:
         self.evidence_collected = []
         self.words_learned = {}
         self.wrong_attempts = {}
-        self.show_case_screen()
+        self.show_investigation_screen()
     
-    def show_case_screen(self):
-        """Display active case"""
-        self.state = GameState.CASE_ACTIVE
+    def show_investigation_screen(self):
+        """Display investigation phase - player must find the suspicious word"""
+        self.state = GameState.INVESTIGATION
         self.clear_frame()
+        self.identified_word = None
         
         case = CASES[self.current_case_index]
         case_num = self.current_case_index + 1
@@ -260,58 +263,55 @@ class VocabularyCrimeScene:
         panel = tk.Frame(self.main_frame, bg="#2d2d44", relief=tk.RAISED, bd=3)
         panel.pack(fill=tk.BOTH, expand=True, pady=20)
         
-        # Case instruction
+        # Investigation instruction
         instruction = tk.Label(
             panel,
-            text="🚨 SUSPICIOUS WORD DETECTED! 🚨",
+            text="🕵️ FIND THE WORD THAT DOESN'T BELONG 🕵️",
             font=self.heading_font,
             fg="#ff6b6b",
             bg="#2d2d44"
         )
         instruction.pack(pady=15)
         
-        # Sentence display
-        sentence_label = tk.Label(
+        # Hint
+        hint = tk.Label(
             panel,
-            text="Click the SUSPICIOUS word in this sentence:",
+            text="Click on words to investigate. One word doesn't fit the sentence.",
             font=self.normal_font,
-            fg="#ffffff",
+            fg="#95e1d3",
             bg="#2d2d44"
         )
-        sentence_label.pack(pady=5)
+        hint.pack(pady=5)
         
-        # Sentence as clickable words
+        # Sentence as clickable words (ALL words look identical)
         sentence_frame = tk.Frame(panel, bg="#2d2d44")
-        sentence_frame.pack(pady=15)
+        sentence_frame.pack(pady=25)
         
         words = case["sentence"].rstrip(".").split()
-        for word in words:
+        for i, word in enumerate(words):
             word_clean = word.rstrip(".")
-            if word_clean.lower() == case["suspicious_word"].lower():
-                word_btn = tk.Label(
-                    sentence_frame,
-                    text=word,
-                    font=font.Font(family="Arial", size=14, weight="bold"),
-                    fg="#ff6b6b",
-                    bg="#2d2d44",
-                    relief=tk.RAISED,
-                    bd=2,
-                    padx=8,
-                    pady=5,
-                    cursor="hand2"
-                )
-                word_btn.pack(side=tk.LEFT, padx=5)
-                word_btn.bind("<Button-1>", lambda e: self.word_clicked(case["suspicious_word"]))
-            else:
-                word_label = tk.Label(
-                    sentence_frame,
-                    text=word,
-                    font=font.Font(family="Arial", size=14),
-                    fg="#a8e6cf",
-                    bg="#2d2d44",
-                    padx=5
-                )
-                word_label.pack(side=tk.LEFT, padx=5)
+            # All words look the same - no visual distinction
+            word_btn = tk.Label(
+                sentence_frame,
+                text=word,
+                font=self.word_font,
+                fg="#a8e6cf",
+                bg="#2d2d44",
+                relief=tk.RAISED,
+                bd=2,
+                padx=8,
+                pady=5,
+                cursor="hand2"
+            )
+            word_btn.pack(side=tk.LEFT, padx=5)
+            word_btn.bind("<Button-1>", lambda e, w=word_clean: self.investigate_word(w, case))
+            # Hover effect for interactivity feedback
+            def on_enter(event, btn=word_btn):
+                btn.config(bg="#4ecdc4", relief=tk.SUNKEN)
+            def on_leave(event, btn=word_btn):
+                btn.config(bg="#2d2d44", relief=tk.RAISED)
+            word_btn.bind("<Enter>", on_enter)
+            word_btn.bind("<Leave>", on_leave)
         
         # Message label for feedback
         self.feedback_label = tk.Label(
@@ -319,50 +319,111 @@ class VocabularyCrimeScene:
             text="",
             font=self.normal_font,
             fg="#ffffff",
+            bg="#2d2d44",
+            wraplength=500
+        )
+        self.feedback_label.pack(pady=20)
+    
+    def investigate_word(self, word, case):
+        """Handle word investigation - determine if it's the culprit"""
+        if word.lower() == case["suspicious_word"].lower():
+            # CORRECT! Show success and move to replacement phase
+            self.identified_word = word
+            self.show_word_identified(case, word)
+        else:
+            # Wrong word - player keeps investigating
+            self.feedback_label.config(
+                text=f"🔍 Not the culprit! Keep investigating.",
+                fg="#95e1d3"
+            )
+            self.root.after(1500, lambda: self.feedback_label.config(text=""))
+    
+    def show_word_identified(self, case, identified_word):
+        """Show that the suspicious word has been found"""
+        self.clear_frame()
+        
+        case_num = self.current_case_index + 1
+        
+        # Header with progress
+        header_frame = tk.Frame(self.main_frame, bg="#1a1a2e")
+        header_frame.pack(fill=tk.X, pady=10)
+        
+        progress = tk.Label(
+            header_frame,
+            text=f"CASE {case_num} / {len(CASES)}",
+            font=self.heading_font,
+            fg="#ff6b6b",
+            bg="#1a1a2e"
+        )
+        progress.pack()
+        
+        # Progress bar
+        progress_width = int((case_num / len(CASES)) * 40)
+        progress_bar = tk.Label(
+            header_frame,
+            text="█" * progress_width + "░" * (40 - progress_width),
+            font=font.Font(family="Arial", size=10),
+            fg="#4ecdc4",
+            bg="#1a1a2e"
+        )
+        progress_bar.pack()
+        
+        # Detective points
+        points = tk.Label(
+            header_frame,
+            text=f"🔍 Detective Points: {self.detective_points}",
+            font=self.normal_font,
+            fg="#a8e6cf",
+            bg="#1a1a2e"
+        )
+        points.pack()
+        
+        # Case panel
+        panel = tk.Frame(self.main_frame, bg="#2d2d44", relief=tk.RAISED, bd=3)
+        panel.pack(fill=tk.BOTH, expand=True, pady=20)
+        
+        # Success message
+        success = tk.Label(
+            panel,
+            text="🚨 WORD CRIME DETECTED! 🚨",
+            font=self.heading_font,
+            fg="#ff6b6b",
             bg="#2d2d44"
         )
-        self.feedback_label.pack(pady=15)
+        success.pack(pady=15)
         
-        # Options frame
-        self.options_frame = tk.Frame(panel, bg="#2d2d44")
-        self.options_frame.pack(pady=20)
-        
-        self.show_options(case)
-    
-    def word_clicked(self, word):
-        """Handle word click"""
-        case = CASES[self.current_case_index]
-        if word.lower() == case["suspicious_word"].lower():
-            self.feedback_label.config(text="✓ Correct word selected!", fg="#a8e6cf")
-            self.show_replacement_options()
-        else:
-            self.feedback_label.config(text="✗ Wrong word! Try again.", fg="#ff6b6b")
-    
-    def show_options(self, case):
-        """Show replacement word options"""
-        # Clear previous options
-        for widget in self.options_frame.winfo_children():
-            widget.destroy()
-        
-        title = tk.Label(
-            self.options_frame,
-            text="What would be a better word?",
+        # Identified word
+        identified_label = tk.Label(
+            panel,
+            text=f"You found the suspicious word:",
             font=self.normal_font,
             fg="#ffffff",
             bg="#2d2d44"
         )
-        title.pack(pady=10)
+        identified_label.pack(pady=10)
         
-        self.show_replacement_options()
-    
-    def show_replacement_options(self):
-        """Display replacement word buttons"""
-        case = CASES[self.current_case_index]
+        word_display = tk.Label(
+            panel,
+            text=identified_word.upper(),
+            font=font.Font(family="Arial", size=20, weight="bold"),
+            fg="#ff6b6b",
+            bg="#2d2d44"
+        )
+        word_display.pack(pady=10)
         
-        # Clear options
-        for widget in self.options_frame.winfo_children():
-            if isinstance(widget, tk.Button):
-                widget.destroy()
+        # Question for replacement
+        question = tk.Label(
+            panel,
+            text="What word should replace it?",
+            font=self.normal_font,
+            fg="#a8e6cf",
+            bg="#2d2d44"
+        )
+        question.pack(pady=20)
+        
+        # Options for replacement
+        self.options_frame = tk.Frame(panel, bg="#2d2d44")
+        self.options_frame.pack(pady=20)
         
         for option in case["options"]:
             btn = tk.Button(
@@ -389,9 +450,19 @@ class VocabularyCrimeScene:
             
             btn.bind("<Enter>", on_enter)
             btn.bind("<Leave>", on_leave)
+        
+        # Feedback label for replacement answers
+        self.replacement_feedback = tk.Label(
+            panel,
+            text="",
+            font=self.normal_font,
+            fg="#ffffff",
+            bg="#2d2d44"
+        )
+        self.replacement_feedback.pack(pady=15)
     
     def check_answer(self, selected_word):
-        """Check if answer is correct"""
+        """Check if replacement word is correct"""
         case = CASES[self.current_case_index]
         case_id = case["id"]
         
@@ -412,11 +483,10 @@ class VocabularyCrimeScene:
                 self.wrong_attempts[case_id] = 0
             self.wrong_attempts[case_id] += 1
             
-            self.feedback_label.config(
+            self.replacement_feedback.config(
                 text=f"❌ Not quite! Try again. (Attempt {self.wrong_attempts[case_id]})",
                 fg="#ff6b6b"
             )
-            self.root.after(2000, self.show_replacement_options)
     
     def show_case_success(self, case):
         """Show case solved screen"""
@@ -511,7 +581,7 @@ class VocabularyCrimeScene:
     def next_case(self):
         """Move to next case"""
         self.current_case_index += 1
-        self.show_case_screen()
+        self.show_investigation_screen()
     
     def show_final_screen(self):
         """Show game completion screen"""
