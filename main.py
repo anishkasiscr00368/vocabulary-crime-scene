@@ -8,6 +8,7 @@ class GameState(Enum):
     INVESTIGATION = 3
     WORD_REPLACEMENT = 4
     CASE_CLOSED = 5
+    WORD_VAULT = 6
 
 # Vocabulary Crime Cases Database
 CASES = [
@@ -192,7 +193,7 @@ class VocabularyCrimeScene:
         # Info text
         info = tk.Label(
             self.main_frame,
-            text="Welcome, Detective!\n\nYour mission: Solve 8 vocabulary crimes by finding\nthe wrong word in each sentence and replacing it\nwith the correct one.\n\nCollect evidence. Earn detective points.\nExpand your vocabulary!",
+            text="Welcome, Detective!\n\nYour mission: Solve 8 vocabulary crimes by finding\nthe wrong word in each sentence and replacing it\nwith the correct one.\n\nCollect evidence. Earn detective points. Learn words!",
             font=self.normal_font,
             fg="#ffffff",
             bg="#1a1a2e",
